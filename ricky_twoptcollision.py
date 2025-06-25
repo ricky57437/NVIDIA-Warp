@@ -58,12 +58,12 @@ class Example:
 
         #Spring stiffness constant, how stiff the contact is 
         # (higher kf: particles resist overlapping more)
-        self.model.particle_kf = 1e6
+        self.model.particle_kf = 1e5
 
         #damping constant, how much energy dissapates 
         #n(higher kd: more dissapated)
         self.model.soft_contact_kd = 0
-        self.model.soft_contact_kf = 1e6
+        #self.model.soft_contact_kf = 1e6
 
         self.state_0 = self.model.state()
         self.state_1 = self.model.state()
@@ -129,7 +129,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--stage_path",
         type=lambda x: None if x == "None" else str(x),
-        default="rickyexample3_onept.usd",
+        default="ricky_twoptcollision.usd",
         help="Path to the output USD file.",
     )
     parser.add_argument("--num_frames", type=int, default=400, help="Total number of frames.")
