@@ -56,14 +56,12 @@ class Example:
         #sets gravity to zero?
         self.model.gravity = wp.vec3(0.0, 0.0, 0.0)
 
-        #Spring stiffness constant, how stiff the contact is 
-        # (higher kf: particles resist overlapping more)
-        self.model.particle_kf = 1e5
+        self.model.particle_ke = 10  # Higher = more elastic bounce
+        self.model.particle_kd = 0    # Lower = less damping = less energy loss
+        
+        self.model.particle_max_velocity = 100.0  # Make sure this isn't limiting bounce
 
-        #damping constant, how much energy dissapates 
-        #n(higher kd: more dissapated)
-        self.model.soft_contact_kd = 0
-        #self.model.soft_contact_kf = 1e6
+
 
         self.state_0 = self.model.state()
         self.state_1 = self.model.state()
