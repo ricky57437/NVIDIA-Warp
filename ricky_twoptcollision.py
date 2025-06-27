@@ -172,13 +172,3 @@ if __name__ == "__main__":
 
         if example.renderer:
             example.renderer.save()
-
-    # Print or export the position data
-    #import csv
-
-    #with open("particle_positions.csv", "w", newline="") as f:
-        #writer = csv.writer(f)
-        #writer.writerow(["time", "x1", "y1", "z1", "x2", "y2", "z2"])
-        #writer.writerows(example.positions)
-
-    #print("Saved particle positions to particle_positions.csv")
