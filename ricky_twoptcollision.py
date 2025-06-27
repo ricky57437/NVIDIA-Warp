@@ -136,13 +136,16 @@ class Example:
 
 
     def render(self):
+    #defined in render_usd.py
         if self.renderer is None:
             return
 
         with wp.ScopedTimer("render"):
+        #times like before to see performance
             self.renderer.begin_frame(self.sim_time)
             self.renderer.render(self.state_0)
             self.renderer.end_frame()
+            #begins a new frame, renders it, then ends
 
 
 if __name__ == "__main__":
