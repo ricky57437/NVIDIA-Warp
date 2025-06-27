@@ -87,48 +87,52 @@ class Example:
 
         self.state_0 = self.model.state()
         self.state_1 = self.model.state()
+        #creates two simulation states
 
         self.integrator = wp.sim.SemiImplicitIntegrator()
-
+        #instantiates SemiImplicitIntegrator
+        #advances btwn the two states
+        
         if stage_path:
             self.renderer = wp.sim.render.SimRenderer(self.model, stage_path, scaling=20.0)
+        #if a stage path is defined (this case it is to "example_granular.usd") then calls SimRenderer
+        #parameters for SimRenderer(model.py, "example_granular.usd", scale 20:1 makes bigger to visualize easier)
+        
         else:
             self.renderer = None
+        #if no stage path defined, fails
 
         self.use_cuda_graph = wp.get_device().is_cuda
+        #checks if cuda gpu is present
         if self.use_cuda_graph:
             with wp.ScopedCapture() as capture:
+            #confused on what scopedcapture does
                 self.simulate()
             self.graph = capture.graph
+        #data from within that part of the simulation is stored into a cuda graph
 
     def simulate(self):
         for _ in range(self.sim_substeps):
+        #sim_substeps = 64 (so repeats 64 times)
             self.state_0.clear_forces()
+            #resets state_0, clean slate
             self.integrator.simulate(self.model, self.state_0, self.state_1, self.sim_dt)
-
-            # swap states
+            #integrator.simulate(model, state in, state out, time step (sec))
             (self.state_0, self.state_1) = (self.state_1, self.state_0)
+            #swap states
+            #1 becomes the current and 0 becomes the new. keeps repeating until loop ends
 
     def step(self):
         with wp.ScopedTimer("step"):
+        #times how long it takes to run this block of code
             self.model.particle_grid.build(self.state_0.particle_q, self.radius * 2.0)
+            #builds cell grid to analyze what particles are neighboring each other (eularian approacj)
             if self.use_cuda_graph:
                 wp.capture_launch(self.graph)
             else:
                 self.simulate()
 
         self.sim_time += self.frame_dt
-
-        # Extract positions as numpy arrays for easy access
-        positions_np = self.state_0.particle_q.numpy()
-        pos1 = positions_np[0]
-        pos2 = positions_np[1]
-
-        self.positions.append((
-            self.sim_time,
-            pos1[0], pos1[1], pos1[2],
-            pos2[0], pos2[1], pos2[2]
-        ))
 
 
     def render(self):
@@ -167,11 +171,11 @@ if __name__ == "__main__":
             example.renderer.save()
 
     # Print or export the position data
-    import csv
+    #import csv
 
-    with open("particle_positions.csv", "w", newline="") as f:
-        writer = csv.writer(f)
-        writer.writerow(["time", "x1", "y1", "z1", "x2", "y2", "z2"])
-        writer.writerows(example.positions)
+    #with open("particle_positions.csv", "w", newline="") as f:
+        #writer = csv.writer(f)
+        #writer.writerow(["time", "x1", "y1", "z1", "x2", "y2", "z2"])
+        #writer.writerows(example.positions)
 
-    print("Saved particle positions to particle_positions.csv")
+    #print("Saved particle positions to particle_positions.csv")
