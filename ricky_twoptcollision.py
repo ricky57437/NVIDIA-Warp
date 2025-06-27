@@ -12,29 +12,47 @@ class Example:
         fps = 60
         self.frame_dt = 1.0 / fps
 
-        self.sim_substeps = 128
+        self.sim_substeps = 64
         self.sim_dt = self.frame_dt / self.sim_substeps
         self.sim_time = 0.0
 
-        self.radius = 0.8
+        self.radius = 3.0
 
         self.positions = []  # store (frame_number, pos1, pos2)
 
         builder = wp.sim.ModelBuilder()
+        #instantiates ModelBuilder class to create a  binary collision scene
         builder.default_particle_radius = self.radius
-
+        #changes default_particle_radius to 3.0
+        
         builder.add_particle_grid(
-            dim_x=1,
-            dim_y=1,
-            dim_z=1,
-            cell_x=self.radius * 50.0,
-            cell_y=self.radius * 50.0,
-            cell_z=self.radius * 50.0,
+        #method of ModelBuilder that takes in all the parameters below
+            dim_x=5,
+            dim_y=5,
+            dim_z=5,
+            #dim is how many particles along corresponding axis
+            cell_x=self.radius * 2.1,
+            cell_y=self.radius * 2.1,
+            cell_z=self.radius * 2.1,
+            #cell is how far apart the radii of each particle is
+            #since the radii is 3, the centers of the particles are 6 units away from each other.
+            #cells should be > 2
             pos=wp.vec3(0.0, 3.0, 0.0),
+            #position of grid
             rot=wp.quat_identity(),
+            #rotation around axes (x, y, z, w)
+            #determines rotation: Sin(value/2)
+            #quat_identity() = (0,0,0,1)  -  no rotation
+            #quat(0, 0.5, 0, 1)  -  rotation of 45 degrees along y axis
             vel=wp.vec3(5.0, 0.0, 0.0),
+            #initial velocity of particles
+            #3 components/directions
             mass=0.1,
+            #mass of particles
             jitter=self.radius * 0.1,
+            #random displacement of particles to make more "realistic"
+            #jitter implemented lines 4190-4203
+            #moves pos by random number [0,1] * jitter
         )
 
         builder.add_particle_grid(
@@ -52,9 +70,11 @@ class Example:
         ) 
 
         self.model = builder.finalize()
+        #indicates that the model was finalized
 
-        #sets gravity to zero?
         self.model.gravity = wp.vec3(0.0, 0.0, 0.0)
+        #sets gravity to zero
+        #default = (0.0, -9.80665, 0.0)
 
         self.model.particle_ke = 10  # Higher = more elastic bounce
         self.model.particle_kd = 0    # Lower = less damping = less energy loss
