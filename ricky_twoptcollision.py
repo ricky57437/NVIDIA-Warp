@@ -27,9 +27,9 @@ class Example:
         
         builder.add_particle_grid(
         #method of ModelBuilder that takes in all the parameters below
-            dim_x=5,
-            dim_y=5,
-            dim_z=5,
+            dim_x=1,
+            dim_y=1,
+            dim_z=1,
             #dim is how many particles along corresponding axis
             cell_x=self.radius * 2.1,
             cell_y=self.radius * 2.1,
