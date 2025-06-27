@@ -51,7 +51,7 @@ class Example:
             #mass of particles
             jitter=self.radius * 0.1,
             #random displacement of particles to make more "realistic"
-            #jitter implemented lines 4190-4203
+            #jitter implemented lines 4190-4203 model.py
             #moves pos by random number [0,1] * jitter
         )
 
@@ -76,12 +76,14 @@ class Example:
         #sets gravity to zero
         #default = (0.0, -9.80665, 0.0)
 
-        self.model.particle_ke = 10  # Higher = more elastic bounce
-        self.model.particle_kd = 0    # Lower = less damping = less energy loss
+        self.model.particle_ke = 10
+        #particle normal contact stiffness
+        #ke is multiplied with the spring displacement to calculate the normal force of two colliding particles
+        #implemented 48-74 integrator_euler.py
         
-        self.model.particle_max_velocity = 100.0  # Make sure this isn't limiting bounce
-
-
+        self.model.particle_kd = 0
+        #particle normal contact damping
+        #kd is multiplied with relative velocity to calculate normal force as well
 
         self.state_0 = self.model.state()
         self.state_1 = self.model.state()
