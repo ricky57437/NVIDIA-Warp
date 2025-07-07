@@ -11,9 +11,12 @@ class Example:
         fps = 60
         self.frame_dt = 1.0 / fps
 
-        self.sim_substeps = 128
+        self.sim_substeps = 64
         self.sim_dt = self.frame_dt / self.sim_substeps
         self.sim_time = 0.0
+        #num frames: total number of frames (lenght of simulation)
+        #sim_substeps: number of physics calculation substeps per frame (physical accuracy)
+        #fps: frames per second (visual accuracy)
 
         self.radius = 3.0
 
@@ -23,6 +26,7 @@ class Example:
         #instantiates ModelBuilder class to create a  binary collision scene
         builder.default_particle_radius = self.radius
         #changes default_particle_radius to 3.0
+    
         
         builder.add_particle_grid(
         #method of ModelBuilder that takes in all the parameters below
@@ -30,12 +34,10 @@ class Example:
             dim_y=1,
             dim_z=1,
             #dim is how many particles along corresponding axis
-            cell_x=self.radius * 2.1,
-            cell_y=self.radius * 2.1,
-            cell_z=self.radius * 2.1,
-            #cell is how far apart the radii of each particle is
-            #since the radii is 3, the centers of the particles are 6 units away from each other.
-            #cells should be > 2
+            cell_x=1,
+            cell_y=1,
+            cell_z=1,
+            #cell is how far apart the center of each particle is (must be > radius)
             pos=wp.vec3(-15.0, 3.0, 0.0),
             #position of grid
             rot=wp.quat_identity(),
@@ -53,6 +55,7 @@ class Example:
             #jitter implemented lines 4190-4203 model.py
             #moves pos by random number [0,1] * jitter
         )
+
 
         builder.add_particle_grid(
             dim_x=1,
@@ -75,14 +78,16 @@ class Example:
         #sets gravity to zero
         #default = (0.0, -9.80665, 0.0)
 
-        self.model.particle_ke = 1e3
+        self.model.particle_ke = 100
         #particle normal contact stiffness
         #ke is multiplied with the spring displacement to calculate the normal force of two colliding particles
-        #implemented 48-74 integrator_euler.py
-        
-        self.model.particle_kd = 30
+        #default value = 1.0e3
+        #integrator_euler.py lines 48-74
+    
+        self.model.particle_kd = 15
         #particle normal contact damping
         #kd is multiplied with relative velocity to calculate normal force as well
+        #default value = 1.0e2
 
         self.state_0 = self.model.state()
         self.state_1 = self.model.state()
@@ -117,6 +122,7 @@ class Example:
             #resets state_0, clean slate
             self.integrator.simulate(self.model, self.state_0, self.state_1, self.sim_dt)
             #integrator.simulate(model, state in, state out, time step (sec))
+            #using state in, calculates forces for state out
             (self.state_0, self.state_1) = (self.state_1, self.state_0)
             #swap states
             #1 becomes the current and 0 becomes the new. keeps repeating until loop ends
@@ -136,7 +142,7 @@ class Example:
 
 
     def render(self):
-    #defined in `render_`usd.py
+    #defined in `render_usd.py
         if self.renderer is None:
             return
 
@@ -161,8 +167,9 @@ if __name__ == "__main__":
         default="binary.usd",
         help="Path to the output USD file.",
     )
-    parser.add_argument("--num_frames", type=int, default=400, help="Total number of frames.")
+    parser.add_argument("--num_frames", type=int, default=300, help="Total number of frames.")
     #tells the parser what device, stage, and how many frames to run on
+    #num frames determines the length of the simulation. more frames = longer simulation
 
     args = parser.parse_known_args()[0]
 
@@ -177,4 +184,3 @@ if __name__ == "__main__":
 
         if example.renderer:
             example.renderer.save()
-            #saves the usd file
