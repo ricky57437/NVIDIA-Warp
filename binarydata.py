@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-stage = Usd.Stage.Open("ricky_twoptcollision.usd")
+stage = Usd.Stage.Open("binary.usd")
 #opens the usd file and assigns to stage
 prim = stage.GetPrimAtPath("/root/particles")
 #prims are like headers. assigns prim to the /root/particles prim
@@ -14,6 +14,7 @@ positions_attr = prim.GetAttribute("positions")
 velocities_attr = prim.GetAttribute("velocities")
 
 time_samples = positions_attr.GetTimeSamples()
+
 p0_pos = []
 p0_vel = [5,]
 p1_pos = []
@@ -36,6 +37,7 @@ for t in time_samples:
     p1_pos.append(p1[0])
     time.append(t / fps)
     #t is the time step and fps is number of t's per second
+
 
 for i in range(1, len(time)):
     dt = time[i] - time[i - 1]
@@ -75,37 +77,7 @@ plt.title("Particle p0 and p1 Velocities Over Time")
 plt.legend()
 plt.grid(True)
 
-#print(abs(p0_vel[399] / 5))
-plt.show()
 
-
-'''
-for prim in stage.Traverse():
-    print(prim.GetPath())
-
-prim = stage.GetPrimAtPath("/root/particles/sphere")
-for attr in prim.GetAttributes():
-    print(attr.GetName())
-'''
-'''
-test_attr = prim.GetAttribute("accelerations")    
-test = test_attr.Get(1-5)
-print(test)
-'''
-
-'''
-with open("particle_positions.csv", "w", newline="") as f:
-    writer = csv.writer(f)
-    writer.writerow(["frame", "particle_index", "x", "y", "z"])
-
-    for t in time_samples:
-        stage.SetTimeCodesPerSecond(1)  
-        # Optional: frame-timestep alignment
-        positions = points_attr.Get(t)
-        p0 = positions[0]
-        p0_pos.append(p0[0])
-        for i, p in enumerate(positions):
-            writer.writerow([t, i, p[0], p[1], p[2]])
-
-print(p0_pos)
-'''
+print(len(time_samples))
+print(abs(p0_vel))
+#plt.show()
