@@ -7,11 +7,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 class Example:
-    def __init__(self, stage_path="example_granular.usd"):
+    def __init__(self, stage_path="binary.usd"):
         fps = 60
         self.frame_dt = 1.0 / fps
 
-        self.sim_substeps = 64
+        self.sim_substeps = 128
         self.sim_dt = self.frame_dt / self.sim_substeps
         self.sim_time = 0.0
         #num frames: total number of frames (lenght of simulation)
@@ -45,12 +45,12 @@ class Example:
             #determines rotation: Sin(value/2)
             #quat_identity() = (0,0,0,1)  -  no rotation
             #quat(0, 0.5, 0, 1)  -  rotation of 45 degrees along y axis
-            vel=wp.vec3(5.0, 0.0, 0.0),
+            vel=wp.vec3(8.0, 0.0, 0.0),
             #initial velocity of particles
             #3 components/directions
-            mass=0.1,
+            mass=1,
             #mass of particles
-            jitter=self.radius * 0.1,
+            jitter=0,
             #random displacement of particles to make more "realistic"
             #jitter implemented lines 4190-4203 model.py
             #moves pos by random number [0,1] * jitter
@@ -61,14 +61,14 @@ class Example:
             dim_x=1,
             dim_y=1,
             dim_z=1,
-            cell_x=self.radius * 50.0,
-            cell_y=self.radius * 50.0,
-            cell_z=self.radius * 50.0,
+            cell_x=1,
+            cell_y=1,
+            cell_z=1,
             pos=wp.vec3(15.0, 3.0, 0.0),
             rot=wp.quat_identity(),
-            vel=wp.vec3(-5.0, 0.0, 0.0),
-            mass=0.1,
-            jitter=self.radius * 0.1,
+            vel=wp.vec3(-8.0, 0.0, 0.0),
+            mass=1,
+            jitter=0,
         ) 
 
         self.model = builder.finalize()
@@ -84,7 +84,7 @@ class Example:
         #default value = 1.0e3
         #integrator_euler.py lines 48-74
     
-        self.model.particle_kd = 15
+        self.model.particle_kd = 0
         #particle normal contact damping
         #kd is multiplied with relative velocity to calculate normal force as well
         #default value = 1.0e2
@@ -167,7 +167,7 @@ if __name__ == "__main__":
         default="binary.usd",
         help="Path to the output USD file.",
     )
-    parser.add_argument("--num_frames", type=int, default=300, help="Total number of frames.")
+    parser.add_argument("--num_frames", type=int, default=200, help="Total number of frames.")
     #tells the parser what device, stage, and how many frames to run on
     #num frames determines the length of the simulation. more frames = longer simulation
 
