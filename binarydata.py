@@ -16,9 +16,9 @@ velocities_attr = prim.GetAttribute("velocities")
 time_samples = positions_attr.GetTimeSamples()
 
 p0_pos = []
-p0_vel = [5,]
+p0_vel = [10,]
 p1_pos = []
-p1_vel = [-5,]
+p1_vel = [-10,]
 time = []
 #creating empty arrays
 
@@ -79,5 +79,6 @@ plt.grid(True)
 
 
 print(len(time_samples))
-print(abs(p0_vel))
+print(p0_vel)
+print(p0_vel[-1] / 10)
 #plt.show()
