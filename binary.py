@@ -38,17 +38,17 @@ class Example:
             cell_y=1,
             cell_z=1,
             #cell is how far apart the center of each particle is (must be > radius)
-            pos=wp.vec3(-15.0, 3.0, 0.0),
+            pos=wp.vec3(-15.0, 10.0, 0.0),
             #position of grid
             rot=wp.quat_identity(),
             #rotation around axes (x, y, z, w)
             #determines rotation: Sin(value/2)
             #quat_identity() = (0,0,0,1)  -  no rotation
             #quat(0, 0.5, 0, 1)  -  rotation of 45 degrees along y axis
-            vel=wp.vec3(8.0, 0.0, 0.0),
+            vel=wp.vec3(10.0, 0.0, 0.0),
             #initial velocity of particles
             #3 components/directions
-            mass=1,
+            mass=2,
             #mass of particles
             jitter=0,
             #random displacement of particles to make more "realistic"
@@ -64,10 +64,10 @@ class Example:
             cell_x=1,
             cell_y=1,
             cell_z=1,
-            pos=wp.vec3(15.0, 3.0, 0.0),
+            pos=wp.vec3(15.0, 10.0, 0.0),
             rot=wp.quat_identity(),
-            vel=wp.vec3(-8.0, 0.0, 0.0),
-            mass=1,
+            vel=wp.vec3(-10.0, 0.0, 0.0),
+            mass=2,
             jitter=0,
         ) 
 
@@ -78,13 +78,13 @@ class Example:
         #sets gravity to zero
         #default = (0.0, -9.80665, 0.0)
 
-        self.model.particle_ke = 100
+        self.model.particle_ke = 1500
         #particle normal contact stiffness
         #ke is multiplied with the spring displacement to calculate the normal force of two colliding particles
         #default value = 1.0e3
         #integrator_euler.py lines 48-74
     
-        self.model.particle_kd = 0
+        self.model.particle_kd = 10.44878648
         #particle normal contact damping
         #kd is multiplied with relative velocity to calculate normal force as well
         #default value = 1.0e2
