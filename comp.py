@@ -206,7 +206,7 @@ if __name__ == "__main__":
     tt = []
     for r in rad:
         t1 = datetime.now()  # Use full datetime
-        print(f"Running simulation with radius: {r}")
+        print(f"Running simulation with radius: {r}. Start time: {t1}")
         example = Example(radius=r, stage_path=str(r)+".usd")
 
         for _ in range(args.num_frames):
@@ -220,6 +220,7 @@ if __name__ == "__main__":
         delta = t2 - t1
         particle_count = int(10 // (2 * r)) * int(20 // (2 * r)) * int(10 // (2 * r))
         tt.append(f"{particle_count} particles: {delta.total_seconds():.6f} seconds")
+        print(f"Finished simulation with radius: {r}. End time: {t2}
     
     print()
     print(tt)
