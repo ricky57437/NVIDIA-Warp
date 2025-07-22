@@ -6,7 +6,6 @@ import warp as wp
 import warp.examples
 import warp.sim
 import warp.sim.render
-import math
 import random
 
 from pxr import Gf
@@ -21,42 +20,37 @@ class Example:
         self.sim_substeps = 10000
         self.sim_dt = self.frame_dt / self.sim_substeps
         self.sim_time = 0.0
-
+        
+        #VARIABLES ----------------------------------------------------------------------
+        self.ke = 1e5
+        self.kd = 1e4
         self.radius = 0.05
+        #--------------------------------------------------------------------------------
 
         #initialize the model builder
         builder = wp.sim.ModelBuilder()
         builder.default_particle_radius = self.radius
         builder.default_particle_color = Gf.Vec4f(0.0, 1.0, 0.0, 1.0)
         
+
         #make the particle grid, dimensions given and the cell sizes.
         builder.add_particle_grid(
             #dimensions of the rectangular grid
-            dim_x=80, #how many can fit in 29 #58
-            dim_y=60, #14
-            dim_z=80, #58
+            dim_x=50, 
+            dim_y=60,
+            dim_z=50,
             cell_x=self.radius * 2.0,
             cell_y=self.radius * 2.0,
             cell_z=self.radius * 2.0,
             #where the center is?
-            pos=wp.vec3(-4.5, 35, -4.5), 
+            pos=wp.vec3(-1.25, 35, -1.25), 
             #rotation
             rot=wp.quat_identity(),
             #initial velocity of the particles
-            vel=wp.vec3(0.0, 0.0, 0.0),
+            vel=wp.vec3(0.0, -2.0, 0.0),
             mass=20,
             jitter=self.radius * 0.1,
         )
-
-        # for i in range(len(builder.particle_q)):
-        #     builder.particle_radius[i] = random.choice([.1,.1,.1,.1,.1,.1,.1,.1,.1,.1,.1,.1,.1,.1,.1,.25])
-        #     #can change other things from builder (model.py lines 1183-1188)
-        #     #MAYBE THIS HELPS WITH HOLLOW?
-        #     if builder.particle_radius[i] == 0.1:
-        #         builder.particle_mass[i] = .1
-
-        self.ke = 1e5
-        self.kd = 1e4
 
         #big slant
         builder.add_shape_box(
@@ -90,14 +84,6 @@ class Example:
         self.model.particle_adhesion = 0.0
         #adhesion: attraction between molecules of different substances
 
-        self.model.gravity = wp.vec3(0.0, -18.0, 0.0)
-        
-
-        """
-        self.model.soft_contact_kd = 100.0
-        self.model.soft_contact_kf *= 2.0
-        """
-
         #creating 2 simulation states
         self.state_0 = self.model.state()
         self.state_1 = self.model.state()
@@ -118,7 +104,6 @@ class Example:
                 self.simulate()
             self.graph = capture.graph
 
-#Should be using this in all simulations?
     def simulate(self):
         for _ in range(self.sim_substeps):
             self.state_0.clear_forces()
@@ -159,7 +144,7 @@ if __name__ == "__main__":
         default="phase.usd",
         help="Path to the output USD file.",
     )
-    parser.add_argument("--num_frames", type=int, default=200, help="Total number of frames.")
+    parser.add_argument("--num_frames", type=int, default=250, help="Total number of frames.")
 
     args = parser.parse_known_args()[0]
 
@@ -172,6 +157,3 @@ if __name__ == "__main__":
 
         if example.renderer:
             example.renderer.save()
-    
-
-    
