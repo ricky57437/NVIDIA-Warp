@@ -202,10 +202,10 @@ if __name__ == "__main__":
 
     args = parser.parse_known_args()[0]
     #[.5: 2,000, .232558: 18,963, .108696: 194,672, .050633: 2,000,000, 023585: 20,000,000]
-    rad = [0.5, .232558, .108696]
+    rad = [0.5, .232558]
     tt = []
     for r in rad:
-        t1 = datetime.now().time()
+        t1 = datetime.now()  # Use full datetime
         print(f"Running simulation with radius: {r}")
         example = Example(radius=r, stage_path=str(r)+".usd")
 
@@ -216,9 +216,10 @@ if __name__ == "__main__":
         # if example.renderer:
         #     example.renderer.save()
 
-        t2 = datetime.now().time()
-        delta = datetime.combine(datetime.today(), t2) - datetime.combine(datetime.today(), t1)
-        tt.append(f"{int(10 // (2 * r)) * int(20 // (2 * r)) * int(10 // (2 * r))} particles: {delta.total_seconds():.6f} seconds")
+        t2 = datetime.now()  # Use full datetime
+        delta = t2 - t1
+        particle_count = int(10 // (2 * r)) * int(20 // (2 * r)) * int(10 // (2 * r))
+        tt.append(f"{particle_count} particles: {delta.total_seconds():.6f} seconds")
     
     print()
     print(tt)
@@ -229,6 +230,11 @@ if __name__ == "__main__":
     #     for _ in range(args.num_frames):
     #         example.step()
     #         example.render()
+
+    #     if example.renderer:
+    #         example.renderer.save()
+
+    
 
     #     if example.renderer:
     #         example.renderer.save()
