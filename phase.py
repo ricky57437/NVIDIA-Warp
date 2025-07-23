@@ -10,9 +10,10 @@ import random
 
 from pxr import Gf
 
+#changing: dt, ke/kd, radius
 
 class Example:
-    def __init__(self, stage_path="phase.usd"):
+    def __init__(self, myke, mykd, stage_path="phase.usd"):
         #initial settings, setup such as the fps and radius of the particles.
         fps = 100
         self.frame_dt = 1.0 / fps
@@ -21,11 +22,7 @@ class Example:
         self.sim_dt = self.frame_dt / self.sim_substeps
         self.sim_time = 0.0
         
-        #VARIABLES ----------------------------------------------------------------------
-        self.ke = 1e5
-        self.kd = 1e4
-        self.radius = 0.05
-        #--------------------------------------------------------------------------------
+        self.radius = 0.30
 
         #initialize the model builder
         builder = wp.sim.ModelBuilder()
@@ -36,35 +33,35 @@ class Example:
         #make the particle grid, dimensions given and the cell sizes.
         builder.add_particle_grid(
             #dimensions of the rectangular grid
-            dim_x=50, 
-            dim_y=60,
-            dim_z=50,
+            dim_x=1, 
+            dim_y=1,
+            dim_z=1,
             cell_x=self.radius * 2.0,
             cell_y=self.radius * 2.0,
             cell_z=self.radius * 2.0,
             #where the center is?
-            pos=wp.vec3(-1.25, 35, -1.25), 
+            pos=wp.vec3(0, 21, 0), 
             #rotation
             rot=wp.quat_identity(),
             #initial velocity of the particles
             vel=wp.vec3(0.0, -2.0, 0.0),
             mass=20,
-            jitter=self.radius * 0.1,
+            jitter=self.radius * 0.0,
         )
 
         #big slant
         builder.add_shape_box(
-            pos=wp.vec3(0,18.5,0),
+            pos=wp.vec3(0,19,0),
             hx=5,
-            hy=1.5,
+            hy=1.0,
             hz=5,
             density=1,
             is_solid=True,
             body=-1,
             is_visible=True,
             mu=0.0,
-            ke=self.ke,
-            kd=self.kd
+            ke=myke,
+            kd=mykd
         )
 
         #finaliszes the builder ive been creating this whole time
