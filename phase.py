@@ -7,22 +7,23 @@ import warp.examples
 import warp.sim
 import warp.sim.render
 import random
+import math
 
 from pxr import Gf
 
 #changing: dt, ke/kd, radius
 
 class Example:
-    def __init__(self, myke, mykd, stage_path="phase.usd"):
+    def __init__(self, myke, mykd, pke, pkd, stage_path="phase.usd"):
         #initial settings, setup such as the fps and radius of the particles.
-        fps = 100
+        fps = 60
         self.frame_dt = 1.0 / fps
 
-        self.sim_substeps = 10000
+        self.sim_substeps = 128
         self.sim_dt = self.frame_dt / self.sim_substeps
         self.sim_time = 0.0
         
-        self.radius = 0.30
+        self.radius = 0.1
 
         #initialize the model builder
         builder = wp.sim.ModelBuilder()
@@ -34,27 +35,28 @@ class Example:
         builder.add_particle_grid(
             #dimensions of the rectangular grid
             dim_x=1, 
-            dim_y=1,
+            dim_y=50,
             dim_z=1,
-            cell_x=self.radius * 2.0,
-            cell_y=self.radius * 2.0,
-            cell_z=self.radius * 2.0,
+            cell_x=.25 * 2.0,
+            cell_y=.25 * 2.0,
+            cell_z=.25 * 2.0,
             #where the center is?
-            pos=wp.vec3(0, 21, 0), 
+            pos=wp.vec3(0, 22, 0), 
             #rotation
             rot=wp.quat_identity(),
             #initial velocity of the particles
-            vel=wp.vec3(0.0, -2.0, 0.0),
+            vel=wp.vec3(0.0, -5.0, 0.0),
             mass=20,
             jitter=self.radius * 0.0,
         )
-
+        
         #big slant
         builder.add_shape_box(
-            pos=wp.vec3(0,19,0),
+            pos=wp.vec3(0,19.5,0),
             hx=5,
-            hy=1.0,
+            hy=0.5,
             hz=5,
+            # rot=wp.quat_from_axis_angle(wp.vec3(0, 0, 1), math.radians(15)),
             density=1,
             is_solid=True,
             body=-1,
@@ -70,10 +72,9 @@ class Example:
         self.model.particle_kf = 50.0
         #resistance to sliding btwn two particles
         
-        self.model.particle_ke = 100.0
-        self.model.particle_kd = 10.0
-        self.model.particle_mu = 0.1
-        #mu: particle friction coefficient GAME CHANGER
+        self.model.particle_ke = pke
+        self.model.particle_kd = pkd
+
         
         
         self.model.particke_cohesion = 0.0
@@ -146,7 +147,7 @@ if __name__ == "__main__":
     args = parser.parse_known_args()[0]
 
     with wp.ScopedDevice(args.device):
-        example = Example(stage_path=args.stage_path)
+        example = Example(myke=1e3, mykd=1e3, pke=1e6, pkd=1e5, stage_path=args.stage_path)
 
         for _ in range(args.num_frames):
             example.step()
