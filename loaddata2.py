@@ -72,10 +72,17 @@ class Example:
         usd_geom = UsdGeom.Mesh(usd_stage.GetPrimAtPath("/root/Sphere/Bowl"))  # Adjust based on usdview output
         usd_scale = 10.0
 
+        bowl_points = usd_geom.GetPointsAttr().Get() * usd_scale
+
+        # Move bowl up by 5 units (along y-axis)
+        bowl_offset = wp.vec3(0.0, 15.0, 0.0)
+        bowl_points = np.array(bowl_points) + np.array([bowl_offset[0], bowl_offset[1], bowl_offset[2]])
+
         self.mesh = wp.Mesh(
-            points=wp.array(usd_geom.GetPointsAttr().Get() * usd_scale, dtype=wp.vec3),
+            points=wp.array(bowl_points, dtype=wp.vec3),
             indices=wp.array(usd_geom.GetFaceVertexIndicesAttr().Get(), dtype=int),
         )
+
         #loads mesh from USD file and creates an interacting object using triangle indices and points
 
         #particles
@@ -83,7 +90,7 @@ class Example:
         y_dim = 1
         z_dim = 1
         spacing = 1.0  # distance between particles
-        offset = wp.vec3(-5.0, -4.0, 5.0)  # center offset
+        offset = wp.vec3(-5.0, 11.0, 5.0)  # center offset
 
         grid_pos = []
         for i in range(x_dim):
@@ -95,7 +102,7 @@ class Example:
         init_pos = np.array([[p[0], p[1], p[2]] for p in grid_pos], dtype=np.float32)
         # converts the list of positions to a numpy array
         init_vel = np.zeros_like(init_pos)
-        init_vel[:, 2] = -20.0  # Z-axis velocity set to -5 for all particles
+        init_vel[:, 2] = -2.0  # Z-axis velocity set to -5 for all particles
         self.num_particles = len(init_pos)
 
         self.positions = wp.from_numpy(init_pos, dtype=wp.vec3)
@@ -106,6 +113,7 @@ class Example:
         self.renderer = None
         if stage_path:
             self.renderer = wp.render.UsdRenderer(stage_path)
+            self.renderer.render_ground()
 
     def step(self):
         with wp.ScopedTimer("step", dict=self.sim_timers):
@@ -146,7 +154,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--device", type=str, default=None)
     parser.add_argument("--stage_path", type=lambda x: None if x == "None" else str(x), default="loaddata2.usd")
-    parser.add_argument("--num_frames", type=int, default=500)
+    parser.add_argument("--num_frames", type=int, default=1000)
 
     args = parser.parse_known_args()[0]
 
