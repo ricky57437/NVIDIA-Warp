@@ -48,6 +48,7 @@ def contact_force(n: wp.vec3, v: wp.vec3, c: float, k_n: float, k_d: float, k_f:
 def apply_forces(
 # apply ground contact / particle to particle forces using the method above
     grid: wp.uint64,
+    mesh: wp.uint64,
     particle_x: wp.array(dtype=wp.vec3),
     particle_v: wp.array(dtype=wp.vec3),
     particle_f: wp.array(dtype=wp.vec3),
@@ -83,8 +84,8 @@ def apply_forces(
     c = wp.dot(n, x)
     #particles distance to ground (y=0 plane)
 
-    cohesion_ground = 0.02
-    cohesion_particle = 0.0075
+    cohesion_ground = 0.0
+    cohesion_particle = 0.00
     # how far particles can penetrate the ground/each other before cohesion force is applied
 
     if c < cohesion_ground:
@@ -113,22 +114,58 @@ def apply_forces(
 
                 f = f + contact_force(n, vrel, err, k_contact, k_damp, k_friction, k_mu)
                 # calls contact force here
-
+    
+    margin = radius * 0.5
     max_dist = 1.5
-    query = wp.mesh_query_point_sign_normal(mesh, xpred, max_dist)
-    # checks if the predicted position is intersecting the mesh
+    query = wp.mesh_query_point_sign_normal(mesh, x, max_dist)
     if query.result:
+        # Get exact hit position on mesh
         p = wp.mesh_eval_position(mesh, query.face, query.u, query.v)
-        # evaluates the mesh position AT the intersection point
 
-        delta = xpred - p
-        # distance from the predicted position to the mesh position
+        # Vector from mesh surface to particle
+        delta = x - p
         dist = wp.length(delta) * query.sign
-        # negative = inside the mesh, positive = outside
-        err = dist - margin
-        # how much the particle is inside the mesh
+        err = dist - margin  # penetration depth if negative
+    
+        if err < 0.0:
+            # Surface normal (unit vector)
+            n = wp.normalize(delta) * query.sign
 
+            # Penetration depth (positive scalar)
+            c = -err
 
+            # Relative velocity at contact point (mesh assumed static here)
+            v_rel = v  # if mesh is moving, subtract its velocity
+
+            # Normal velocity component
+            v_n = wp.dot(v_rel, n) * n
+
+            # Tangential velocity component
+            v_t = v_rel - v_n
+
+            # Hooke's law normal force
+            f_n = k_contact * c * n
+
+            # Normal damping force
+            f_d = -k_damp * v_n
+
+            # Tangential damping (viscous friction)
+            f_t = -k_friction * v_t
+
+            # Apply Coulomb friction limit
+            f_t_len = wp.length(f_t)
+            f_n_len = wp.length(f_n)
+            if f_t_len > k_mu * f_n_len:
+                if f_t_len > 1e-6:
+                    f_t = f_t * ((k_mu * f_n_len) / f_t_len)
+                else:
+                    f_t = wp.vec3(0.0, 0.0, 0.0)
+
+            # Total collision force
+            f_total = f_n + f_d + f_t
+
+            # Add to particle force accumulator
+            f = f + f_total
 
     particle_f[i] = f
     # writes the total force to the particle_f array (for every particle)
@@ -178,20 +215,8 @@ class Example:
         self.points = self.particle_grid(32, 64, 32, (0.0, 0.5, 0.0), self.point_radius, 0.1)
 
         self.x = wp.array(self.points, dtype=wp.vec3)
-        self.v = wp.array(np.ones([len(self.x), 3]) * np.array([0.0, 0.0, 15.0]), dtype=wp.vec3)
+        self.v = wp.array(np.ones([len(self.x), 3]) * np.array([0.0, 0.0, -15.0]), dtype=wp.vec3)
         self.f = wp.zeros_like(self.v)
-
-        if stage_path:
-            self.renderer = wp.render.UsdRenderer(stage_path)
-            self.renderer.render_ground()
-        else:
-            self.renderer = None
-
-        self.use_cuda_graph = wp.get_device().is_cuda
-        if self.use_cuda_graph:
-            with wp.ScopedCapture() as capture:
-                self.simulate()
-            self.graph = capture.graph
 
         #physical objects
         usd_path = r"C:/Users/ricky/OneDrive/Desktop/pull from github/warp/warp/examples/assets/bowl2.usdc"
@@ -211,6 +236,18 @@ class Example:
             indices=wp.array(usd_geom.GetFaceVertexIndicesAttr().Get(), dtype=int),
         )
 
+        if stage_path:
+            self.renderer = wp.render.UsdRenderer(stage_path)
+            self.renderer.render_ground()
+        else:
+            self.renderer = None
+
+        self.use_cuda_graph = wp.get_device().is_cuda
+        if self.use_cuda_graph:
+            with wp.ScopedCapture() as capture:
+                self.simulate()
+            self.graph = capture.graph
+
     def simulate(self):
     # for every substep, apply forces, then integrate to find new position and velocity
         for _ in range(self.sim_substeps):
@@ -219,6 +256,7 @@ class Example:
                 dim=len(self.x),
                 inputs=[
                     self.grid.id,
+                    self.mesh.id,
                     self.x,
                     self.v,
                     self.f,
@@ -227,7 +265,6 @@ class Example:
                     self.k_damp,
                     self.k_friction,
                     self.k_mu,
-                    self.mesh
                 ],
             )
             wp.launch(
@@ -308,3 +345,4 @@ if __name__ == "__main__":
 
         if example.renderer:
             example.renderer.save()
+
