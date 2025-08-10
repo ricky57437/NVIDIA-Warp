@@ -61,6 +61,7 @@ def apply_forces(
         # grid → A Warp hash grid structure storing particle positions, used for fast neighbor lookups.
         # particle_x → Array of particle positions.
         # particle_v → Array of particle velocities.
+        # particle_a → Array of particle accelerations.
         # particle_f → Array where we’ll write the total force for each particle.
         # radius → The particle radius (for detecting overlaps).
         # k_contact → Normal spring stiffness.
@@ -74,7 +75,9 @@ def apply_forces(
     i = wp.hash_grid_point_id(grid, tid)
 
     x = particle_x[i]
+    # pos of this particle
     v = particle_v[i]
+    # vel of this particle
 
     f = wp.vec3()
     # total force vector is 0 at the start
@@ -95,8 +98,8 @@ def apply_forces(
         # normal is always (0,1,0) for ground, varies for particles
 
     # particle contact
-    neighbors = wp.hash_grid_query(grid, x, radius * 5.0)
-    # finds neighbors within a certain radius (5x particle radius here)
+    neighbors = wp.hash_grid_query(grid, x, radius * 2.5)
+    # finds neighbors within a certain radius (2.5x particle radius here)
 
     for index in neighbors:
         if index != i:
@@ -122,37 +125,33 @@ def apply_forces(
         # Get exact hit position on mesh
         p = wp.mesh_eval_position(mesh, query.face, query.u, query.v)
 
-        # Vector from mesh surface to particle
         delta = x - p
+        # vector of shortest distance from the particle to the mesh surface
         dist = wp.length(delta) * query.sign
         err = dist - margin  # penetration depth if negative
     
         if err < 0.0:
-            # Surface normal (unit vector)
+            
             n = wp.normalize(delta) * query.sign
-
-            # Penetration depth (positive scalar)
+            # Surface normal (unit vector)
             c = -err
-
-            # Relative velocity at contact point (mesh assumed static here)
+            # Penetration depth (positive scalar)       
+            
             v_rel = v  # if mesh is moving, subtract its velocity
-
-            # Normal velocity component
+            # Relative velocity at contact point (mesh assumed static here)
             v_n = wp.dot(v_rel, n) * n
-
-            # Tangential velocity component
+            # Normal velocity component
             v_t = v_rel - v_n
+            # Tangential velocity component
+            # this should be 0 because mesh is static, but just in case
 
-            # Hooke's law normal force
             f_n = k_contact * c * n
-
-            # Normal damping force
+            # Hooke's law normal force
             f_d = -k_damp * v_n
-
-            # Tangential damping (viscous friction)
+            # Normal damping force
             f_t = -k_friction * v_t
-
-            # Apply Coulomb friction limit
+            # Tangential damping (viscous friction)
+            
             f_t_len = wp.length(f_t)
             f_n_len = wp.length(f_n)
             if f_t_len > k_mu * f_n_len:
@@ -160,12 +159,13 @@ def apply_forces(
                     f_t = f_t * ((k_mu * f_n_len) / f_t_len)
                 else:
                     f_t = wp.vec3(0.0, 0.0, 0.0)
-
-            # Total collision force
+            # Apply Coulomb friction limit
+            
             f_total = f_n + f_d + f_t
-
-            # Add to particle force accumulator
+            # Total collision force
+            
             f = f + f_total
+            # Add to particles total force
 
     particle_f[i] = f
     # writes the total force to the particle_f array (for every particle)
@@ -176,6 +176,7 @@ def integrate(
 # using initial pos and vel, forces are calculated, then applied to find/update new pos and vel
     x: wp.array(dtype=wp.vec3),
     v: wp.array(dtype=wp.vec3),
+    a: wp.array(dtype=wp.vec3),
     f: wp.array(dtype=wp.vec3),
     gravity: wp.vec3,
     dt: float, # timestep
@@ -183,13 +184,31 @@ def integrate(
 ):
     tid = wp.tid()
 
-    v_new = v[tid] + f[tid] * inv_mass * dt + gravity * dt
-    x_new = x[tid] + v_new * dt
+    v_new = v[tid] + (0.5) * a[tid] * dt
+    # v_new = v[tid] + f[tid] * inv_mass * dt + gravity * dt
+    # x_new = x[tid] + v_new * dt
+    # this is where the new position and velocity are calculated using forces
+    # apply_forces and contact_force is already called
+    a_new = f[tid] * inv_mass + gravity
 
     v[tid] = v_new
-    x[tid] = x_new
+    a[tid] = a_new
     # updates particle position and velocity using forces (wrote equations used in ipad)
 
+@wp.kernel
+def halfstep(
+    x: wp.array(dtype=wp.vec3),
+    v: wp.array(dtype=wp.vec3),
+    a: wp.array(dtype=wp.vec3),
+    dt: float, # timestep,
+):
+    tid = wp.tid()
+
+    v_new = v[tid] + (0.5) * a[tid] * dt
+    x_new = x[tid] + v_new * dt
+
+    x[tid] = x_new
+    # updates particle position and velocity to half steps
 
 class Example:
     def __init__(self, stage_path="ricks_warp.usd"):
@@ -200,35 +219,63 @@ class Example:
         self.sim_dt = self.frame_dt / self.sim_substeps # time step for each substep
         self.sim_time = 0.0
 
-        self.point_radius = 0.1 # particle radius
+        self.point_radius = 0.5 # particle radius
 
-        self.k_contact = 8000.0
-        self.k_damp = 2.0
-        self.k_friction = 1.0
-        self.k_mu = 100000.0  # for cohesive materials
+        self.k_contact = 5000.0
+        self.k_damp = 50.0
+        self.k_friction = 0.5
+        self.k_mu = 0.6  # for cohesive materials
+
+        kc_p = 8000
+        kd_p = 2
+        kf_p = 1
+        km_p = 1e5
+        # particle coefficients
+
+        kc_g = 8000
+        kd_g = 2
+        kf_g = 1
+        km_g = 1e5
+        # ground coefficients
+
+        kc_m = 8000
+        kd_m = 2
+        kf_m = 1
+        km_m = 1e5
+        # mesh coefficients
 
         self.inv_mass = 64.0
+        # not sure what this is for
 
-        self.grid = wp.HashGrid(128, 128, 128) # creates a hash grid for particle positions
+        self.grid = wp.HashGrid(128, 128, 128) 
+        # creates a hash grid for particle positions
         self.grid_cell_size = self.point_radius * 5.0
 
-        self.points = self.particle_grid(32, 64, 32, (0.0, 0.5, 0.0), self.point_radius, 0.1)
+        self.points1 = self.particle_grid(10, 5, 30, (-30, 62, -13), self.point_radius, 0.1)
+        # (x, y, z, corner, radius, jitter)
+        # creates a particle grid
+        # method is defined below
 
-        self.x = wp.array(self.points, dtype=wp.vec3)
-        self.v = wp.array(np.ones([len(self.x), 3]) * np.array([0.0, 0.0, -15.0]), dtype=wp.vec3)
+        self.x = wp.array(self.points1, dtype=wp.vec3)
+        self.v = wp.array(np.ones([len(self.x), 3]) * np.array([0.0, 1.0, 0.0]), dtype=wp.vec3)
+        self.a = wp.array(np.zeros([len(self.x), 3], dtype=np.float32) * np.array([0.0, 0.0, 0.0]),dtype=wp.vec3)
+        self.a.numpy()[0] = [0.0, -9.8, 0.0]
+        # initial velocity of particles
+        # would be interesting on how to have two different initial velocities for different particles
+
         self.f = wp.zeros_like(self.v)
 
         #physical objects
-        usd_path = r"C:/Users/ricky/OneDrive/Desktop/pull from github/warp/warp/examples/assets/bowl2.usdc"
+        usd_path = r"C:/Users/ricky/OneDrive/Desktop/pull from github/warp/warp/examples/assets/plinko.usdc"
 
         usd_stage = Usd.Stage.Open(usd_path)
-        usd_geom = UsdGeom.Mesh(usd_stage.GetPrimAtPath("/root/Sphere/Bowl"))  # Adjust based on usdview output
+        usd_geom = UsdGeom.Mesh(usd_stage.GetPrimAtPath("/root/Plinko/Object"))  # Adjust based on usdview output
         usd_scale = 10.0
 
         mesh_points = usd_geom.GetPointsAttr().Get() * usd_scale
 
-        # Move bowl up by 5 units (along y-axis)
-        mesh_offset = wp.vec3(0.0, 15.0, 0.0)
+        mesh_offset = wp.vec3(0.0, 35.0, -30.0)
+        # Move bowl up by 15 units (along y-axis)
         mesh_points = np.array(mesh_points) + np.array([mesh_offset[0], mesh_offset[1], mesh_offset[2]])
 
         self.mesh = wp.Mesh(
@@ -252,6 +299,15 @@ class Example:
     # for every substep, apply forces, then integrate to find new position and velocity
         for _ in range(self.sim_substeps):
             wp.launch(
+                kernel=halfstep,
+                dim=len(self.x),
+                inputs=[self.x,
+                        self.v,
+                        self.a,
+                        self.sim_dt
+                ],
+            )
+            wp.launch(
                 kernel=apply_forces,
                 dim=len(self.x),
                 inputs=[
@@ -270,7 +326,7 @@ class Example:
             wp.launch(
                 kernel=integrate,
                 dim=len(self.x),
-                inputs=[self.x, self.v, self.f, (0.0, -9.8, 0.0), self.sim_dt, self.inv_mass],
+                inputs=[self.x, self.v, self.a, self.f, (0.0, -9.8, 0.0), self.sim_dt, self.inv_mass],
             )
 
     def step(self):
@@ -298,14 +354,14 @@ class Example:
                 points=self.x.numpy(), 
                 radius=self.point_radius, 
                 name="points", 
-                colors=(0.8, 0.3, 0.2)
+                colors=(0.06, 0.65, 0.06)
             )
 
             self.renderer.render_mesh(
                 name="mesh",
                 points=self.mesh.points.numpy(),
                 indices=self.mesh.indices.numpy(),
-                colors=(3.0, 0.4, 0.8),
+                colors=(0.74, 0.87, 0.41),
             )
 
             self.renderer.end_frame()
@@ -332,7 +388,12 @@ if __name__ == "__main__":
         default="ricks_warp.usd",
         help="Path to the output USD file.",
     )
-    parser.add_argument("--num_frames", type=int, default=200, help="Total number of frames.")
+    parser.add_argument(
+        "--num_frames", 
+        type=int, 
+        default=800, 
+        # number of frames to simulate
+        help="Total number of frames.")
 
     args = parser.parse_known_args()[0]
 
